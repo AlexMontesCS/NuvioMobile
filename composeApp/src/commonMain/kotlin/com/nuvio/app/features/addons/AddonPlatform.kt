@@ -41,3 +41,19 @@ expect suspend fun httpRequestRaw(
     followRedirects: Boolean = true,
     maxResponseBodyBytes: Int = DefaultRawHttpResponseMaxBytes,
 ): RawHttpResponse
+
+/**
+ * Performs a streaming GET and delivers the response body line by line as it
+ * arrives over the network. [onContentType] is invoked exactly once when the
+ * response headers arrive, before any body bytes are read. [onLine] receives
+ * each newline-delimited chunk; a final unterminated line is delivered as-is.
+ *
+ * The call fails (throws) when the HTTP status is not successful, mirroring
+ * [httpGetText].
+ */
+expect suspend fun httpGetTextLines(
+    url: String,
+    headers: Map<String, String>,
+    onContentType: (contentType: String?) -> Unit,
+    onLine: (line: String) -> Unit,
+)
