@@ -210,7 +210,18 @@ internal suspend fun fetchAddonStreamsIncrementally(
                 val batch = StreamParser.parseNdjsonBatch(line, addonName, addonId, addonLogo)
                 if (batch.isNotEmpty()) {
                     sawNdjsonBatch = true
-                    batch.forEach { stream -> streamsByKey[stream.dedupKey()] = stream }
+                    val batchByKey = LinkedHashMap<String, StreamItem>(batch.size)
+                    batch.forEach { stream -> batchByKey[stream.dedupKey()] = stream }
+                    // A line that already contains every stream seen so far is a
+                    // cumulative snapshot, so its ordering is authoritative —
+                    // adopt it wholesale instead of appending, otherwise the
+                    // addon's ordering (e.g. quality-grouped) is lost behind
+                    // first-arrival order. Lines that only carry new streams are
+                    // per-source deltas and keep appending.
+                    if (batchByKey.keys.containsAll(streamsByKey.keys)) {
+                        streamsByKey.clear()
+                    }
+                    streamsByKey.putAll(batchByKey)
                     onIntermediateGroup(
                         AddonStreamGroup(
                             addonName = addonName,
